@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
+from typing import Tuple, Callable
+
 
 class Heuristic(object):
 
     # Initialize with name and function
-    def __init__(self, name, function):
+    def __init__(self, name: str, function: Callable) -> None:
         self.name = name
         self.function = function
         return None
 
     # Calc heuristic cost
-    def run(self, state, dim):
+    def run(self, state: Tuple[Tuple[int], Tuple[int]],
+            dim: Tuple[int]) -> int:
         return self.function(state, dim)
 
 
@@ -21,7 +26,8 @@ zero = Heuristic("Zero", lambda p, d: 0)
 #
 # for a given path, calc the heuristic costs
 # heuristic function: Toorac = tiles out of row and column
-def hCostToorac(path, dim, _oldheur=0):
+def hCostToorac(path: Tuple[Tuple[int], Tuple[int]],
+                dim: Tuple[int], _oldheur: int = 0) -> int:
     state = path[-1]
     cost = 0
     for row in range(dim[1]):
@@ -44,7 +50,8 @@ toorac = Heuristic('Tiles Out Of Row And Column', hCostToorac)
 #
 # for a given path, calc the heuristic costs
 # heuristic funktion: Mpt = Misplaced Tiles
-def hCostMpt(path, dim, _oldheur=0):
+def hCostMpt(path: Tuple[Tuple[int], Tuple[int]],
+             dim: Tuple[int], _oldheur: int = 0) -> int:
     state = path[-1]
     cost = 0
     for i, num in enumerate(state):
@@ -61,7 +68,8 @@ misplaced_tiles = Heuristic('Misplaced Tiles', hCostMpt)
 #
 # for a given path, calc the heuristic costs
 # heuristic funktion: Manhattan Distance
-def hCostManhattan(path, dim, _oldheur=0):
+def hCostManhattan(path: Tuple[Tuple[int], Tuple[int]],
+                   dim: Tuple[int], _oldheur: int = 0) -> int:
     state = path[-1]
     if _oldheur == 0 or len(path[0]) == 0:
         cost = 0
@@ -125,7 +133,8 @@ manhattan = Heuristic('Manhattan Distance', hCostManhattan)
 #
 # for a given path, calc the heuristic costs
 # heuristic funktion: LC = Linear Conflicts
-def hCostLinearConflict(path, dim, _oldheur=0):
+def hCostLinearConflict(path: Tuple[Tuple[int], Tuple[int]],
+                        dim: Tuple[int], _oldheur: int = 0) -> int:
     state = path[-1]
     cost = 0
 
@@ -174,7 +183,8 @@ linear_conflict = Heuristic('Linear Conflict', hCostLinearConflict)
 #
 # for a given path, calc the heuristic costs
 # Just for fun, calc LC times 3
-def hCostLC3x(path, dim, _oldheur=0):
+def hCostLC3x(path: Tuple[Tuple[int], Tuple[int]],
+              dim: Tuple[int], _oldheur: int = 0) -> int:
     return hCostLinearConflict(path, dim) * 3
 
 
@@ -185,7 +195,8 @@ linear_conflict_3x = Heuristic('Linear Conflict (x3)', hCostLC3x)
 #
 # for a given path, calc the heuristic costs
 # Just for fun, calc LC times 2
-def hCostLC2x(path, dim, _oldheur=0):
+def hCostLC2x(path: Tuple[Tuple[int], Tuple[int]],
+              dim: Tuple[int], _oldheur: int = 0) -> int:
     return hCostLinearConflict(path, dim) * 2
 
 
@@ -196,7 +207,8 @@ linear_conflict_2x = Heuristic('Linear Conflict (x2)', hCostLC2x)
 #
 # for a given path, calc the heuristic costs
 # Just for fun, calc LC times 1.5
-def hCostLC1_5x(path, dim, _oldheur=0):
+def hCostLC1_5x(path: Tuple[Tuple[int], Tuple[int]],
+                dim: Tuple[int], _oldheur: int = 0) -> int:
     return int(hCostLinearConflict(path, dim) * 1.5)
 
 
@@ -207,7 +219,8 @@ linear_conflict_1_5x = Heuristic('Linear Conflict (x1.5)', hCostLC1_5x)
 #
 # for a given path, calc the heuristic costs
 # Just for fun, calc LC times 1.1
-def hCostLC1_1x(path, dim, _oldheur=0):
+def hCostLC1_1x(path: Tuple[Tuple[int], Tuple[int]],
+                dim: Tuple[int], _oldheur: int = 0) -> int:
     return int(hCostLinearConflict(path, dim) * 1.1)
 
 

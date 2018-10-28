@@ -7,10 +7,8 @@ import pyglet.gl
 from pyglet.window import key
 
 from shibe_raetsel import heuristics as heur
-from shibe_raetsel.puzzle import Puzzle
-from shibe_raetsel.search import a_star, bfs, ida_star
-
-from functools import partial
+from shibe_raetsel.puzzle import Puzzle, InvalidMove
+from shibe_raetsel.search import BFSSearch
 
 
 # will be initialized elsewhere
@@ -136,7 +134,10 @@ def on_draw():
 @window.event
 def on_key_press(symbol, modifiers):
     if symbol in keys.keys():
-        keys[symbol][2]()
+        try:
+            keys[symbol][2]()
+        except InvalidMove:
+            pass
 
 
 def toggleHeuristic():
@@ -197,24 +198,21 @@ def main():
         heur.linear_conflict_3x]
     curHeur = heuristics[0]
 
-    searches = [a_star, bfs, ida_star]
+    # searches = [a_star, bfs, ida_star]
 
     keys = {
         key.B: ('b', "search BFS",
-                lambda: puzzle.solve(
-                    puzzle.search(
-                        searchObject=searches[0], heuristicObject=curHeur,
-                        _debug=flag_debug, _profile=flag_profile))),
-        key.A: ('a', "search A*",
-                lambda: puzzle.solve(
-                    puzzle.search(
-                        searchObject=searches[1], heuristicObject=curHeur,
-                        _debug=flag_debug, _profile=flag_profile))),
-        key.I: ('i', "search IDA*",
-                lambda: puzzle.solve(
-                    puzzle.search(
-                        searchObject=searches[2], heuristicObject=curHeur,
-                        _debug=flag_debug, _profile=flag_profile))),
+                lambda: puzzle.solve(search=BFSSearch())),
+        # key.A: ('a', "search A*",
+        #         lambda: puzzle.solve(
+        #             puzzle.search(
+        #                 searchObject=searches[1], heuristicObject=curHeur,
+        #                 _debug=flag_debug, _profile=flag_profile))),
+        # key.I: ('i', "search IDA*",
+        #         lambda: puzzle.solve(
+        #             puzzle.search(
+        #                 searchObject=searches[2], heuristicObject=curHeur,
+        #                 _debug=flag_debug, _profile=flag_profile))),
         key.SPACE: ('␣', "step through solution", lambda: puzzle.step()),
         key.ENTER: ('↲', "reset puzzle", lambda: puzzle.reset()),
         key.E: ('e', "change heur", lambda: toggleHeuristic()),
@@ -225,10 +223,10 @@ def main():
         key.X: ('x', "toggle debug", lambda: toggleDebug()),
         key.C: ('c', "toggle profile", lambda: toggleProfile()),
         key.P: ('p', "print solution", lambda: puzzle.debugsolution()),
-        key.LEFT: (None, "move left", lambda: puzzle.move(3)),
-        key.UP: (None, "move up", lambda: puzzle.move(1)),
-        key.DOWN: (None, "move down", lambda: puzzle.move(2)),
-        key.RIGHT: (None, "move right", lambda: puzzle.move(0))}
+        key.LEFT: (None, "move left", lambda: puzzle.move(3, twisted=True)),
+        key.UP: (None, "move up", lambda: puzzle.move(1, twisted=True)),
+        key.DOWN: (None, "move down", lambda: puzzle.move(2, twisted=True)),
+        key.RIGHT: (None, "move right", lambda: puzzle.move(0, twisted=True))}
 
     pyglet.app.run()
 

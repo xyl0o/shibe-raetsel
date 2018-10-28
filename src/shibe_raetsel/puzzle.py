@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
 
+from __future__ import annotations
+
 import random
-from shibe_raetsel.search import getNeighborStates
+from shibe_raetsel.search import getNeighborStates, Search
+from shibe_raetsel.heuristics import Heuristic
+
+from typing import Tuple, Sequence, List
 
 
-def index_in_board(element, board, dim):
+def index_in_board(element: int, board: Sequence[int], dim: Tuple[int]):
     idx = board.index(element)
     return idx % dim[0], idx // dim[0]
 
 
-def board_parity(board, dim):
+def board_parity(board: Sequence[int], dim: Tuple[int]):
     inversions = 0
     for num in board:
         if num == 0:
@@ -36,33 +41,38 @@ class NoSolutionError(Exception):
     pass
 
 
+class ParityError(Exception):
+    pass
+
+
+class InvalidMove(Exception):
+    pass
+
+
 class Puzzle(object):
 
     # Initialize with dimension of game
-    def __init__(self, dimX, dimY, twisted=True):
+    def __init__(self, dimX: int, dimY: int) -> None:
         self.dim = (dimX, dimY)
-        self._board = None
-        self._solution = None
-        self.reset()
-
-    # Set the game to solved state
-    def reset(self):
         self._board = self.initstate
         self._solution = []
 
+    def reset(self) -> None:
+        self.__init__(dimX=self.dim[0], dimy=self.dim[1])
+
     # Print the solution
-    def debugsolution(self, twisted=True):
+    def debugsolution(self, twisted: bool = False) -> None:
         arrows = ['→', '↑', '↓', '←']
         if twisted:
             arrows.reverse()
         print('Solution ' + ' '.join(arrows[int(e)] for e in self.solution))
 
     # Run heuristic
-    def heuristic(self, heuristic):
+    def heuristic(self, heuristic: Heuristic) -> int:
         return heuristic.run(('', self.board), self.dim)
 
     # Update hint
-    def hint(self, twisted=True):
+    def hint(self, twisted: bool = False) -> str:
         if self.solved or not self.solution:
             return ' '
 
@@ -71,43 +81,42 @@ class Puzzle(object):
             hints.reverse()
         return hints[int(self.solution[0])]
 
-    def step(self):
+    def step(self) -> None:
         if not self.solution:
             raise NoSolutionError()
 
-        self.move(self.solution[0])
-        self._solution = self.solution[1:]
+        self.move(self.solution[0], twisted=False)
 
     @property
-    def initstate(self):
+    def initstate(self) -> List[int]:
         return list(range(1, self.dim[0] * self.dim[1])) + [0]
 
     @property
-    def board(self):
-        return self._board[:]
+    def board(self) -> List[int]:
+        return list(self._board)
 
     @board.setter
-    def board(self, other_board):
+    def board(self, other_board: Sequence[int]) -> None:
         if not len(other_board) == len(self.board):
             raise ValueError('Cannot assign board with different size.')
         if not board_parity(other_board, self.dim) == 0:
-            raise ValueError('Cannot assign unsolvable board')
-        self._board = other_board
+            raise ParityError()
+        self._board = tuple(other_board)
 
     @property
-    def solution(self):
-        return self._solution[:]
+    def solution(self) -> Tuple[int]:
+        return self._solution
 
     # Return index of given number in game
-    def index(self, element):
+    def index(self, element: int) -> int:
         return index_in_board(element, self.board, self.dim)
 
     # Return element at given coords
-    def tile(self, x, y):
+    def tile(self, x: int, y: int) -> int:
         return self.board[y * self.dim[0] + x]
 
     # Randomize puzzle (with a heuristic bound)
-    def random(self, _bound=0, _heuristic=None):
+    def random(self, _bound: int = 0, _heuristic: Heuristic = None) -> None:
         iter_max = 10000
         if _bound <= 0:
             iter_max = 1
@@ -130,28 +139,27 @@ class Puzzle(object):
         self._board = min_board
 
     @property
-    def solved(self):
+    def solved(self) -> bool:
         return self.board == self.initstate
 
     @property
-    def solvable(self):
+    def solvable(self) -> bool:
         return board_parity(self.board, self.dim) == 0
 
-    def solve(self, search, debug=False):
-        self.solution = search.run(
-            init=self.board,
-            goal=self.initstate,
-            dim=self.dim)
+    def solve(self, search: Search) -> None:
+        self._solution = search.run(
+            board=self.board,
+            dim=self.dim,
+            goal=self.initstate)
 
-    def move(self, direction, twisted=True):
+    def move(self, direction: int, twisted: bool = False) -> None:
         if twisted:
             direction = [0, 1, 2, 3][::-1][direction]
 
-        new = list(getNeighborStates(self.board, self.dim))[direction]
+        new = getNeighborStates(self.board, self.dim)[direction]
+        if not new:
+            raise InvalidMove()
 
-        if new:
-            self.board = new
-            if self.solution and direction == self.solution[0]:
-                self._solution = self.solution[1:]
-        else:
-            raise ValueError(f'Move in direction {direction} not possible')
+        self._board = new
+        if self.solution and direction == self.solution[0]:
+            self._solution = self._solution[1:]

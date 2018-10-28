@@ -2,6 +2,7 @@ from shibe_raetsel import heuristics as heur
 from timeit import default_timer as timer
 import cProfile
 from queue import Queue, PriorityQueue  # ,LifoQueue
+import time
 
 
 # highly used function!
@@ -24,49 +25,52 @@ def getNeighborStates(state, dim):
     # left:
     iswap = izero - 1
     if izero_fdiv == iswap // dim[0]:
-        left = state[:]
+        left = list(state)
         left[izero] = left[iswap]
         left[iswap] = 0
+        left = tuple(left)
     else:
         left = None
 
     # up:
     iswap = izero + dim[0]
     if iswap < dim[0] * dim[1] and izero_mod == iswap % dim[0]:
-        up = state[:]
+        up = list(state)
         up[izero] = up[iswap]
         up[iswap] = 0
+        up = tuple(up)
     else:
         up = None
 
     # down:
     iswap = izero - dim[0]
     if iswap >= 0 and izero_mod == iswap % dim[0]:
-        down = state[:]
+        down = list(state)
         down[izero] = down[iswap]
         down[iswap] = 0
+        down = tuple(down)
     else:
         down = None
 
     # right:
     iswap = izero + 1
     if izero_fdiv == iswap // dim[0]:
-        right = state[:]
+        right = list(state)
         right[izero] = right[iswap]
         right[iswap] = 0
+        right = tuple(right)
     else:
         right = None
 
-    return (left, up, down, right)
+    return left, up, down, right
 
 
 # Do a search without ID
 def genericSearch(start_pos, end_state, puzzle, _heurf=lambda p, d: 0,
-                  _data_struc=Queue, _debug=False):
+                  frontierclass=Queue, _debug=False):
     visited = set()
-    frontier = _data_struc()
+    frontier = frontierclass()
 
-    global heuristic_calls
     heuristic_calls = 0
     max_frontier = 0
 
@@ -127,14 +131,11 @@ def genericSearch(start_pos, end_state, puzzle, _heurf=lambda p, d: 0,
                   "Max. frontier: " + str(max_frontier) + "\n" +
                   "Cur Distance:  " + str(hcost) + " | " +
                   str(hcost - plen + 1) + "h, " + str(plen - 1) + "p")
-    return None
 
 
 # Do a search with IDA
 def idaSearch(start_pos, end_state, puzzle, heurf,
-              _data_struc=Queue, _debug=False):
-    global global_added_nodes
-    global_added_nodes = 0
+              frontierclass=Queue, _debug=False):
 
     # for increasing bound by 2 you need to find the right start bound
     # that is 1 the MD of the blank tile to its final position is odd, 0 else
@@ -164,14 +165,10 @@ def idaSearch(start_pos, end_state, puzzle, heurf,
 
 # Used by IDA to search until a given bound
 def idaIteration(path, bound, end_state, heur, puzzle, debug):
-    global global_added_nodes
 
-    visited = set()
-    visited.add(str(path[-1]))
-    visited_dict = {}
-    visited_dict[str(path[-1])] = 0
-    frontier = []
-    frontier.append(path)
+    visited = {str(path[-1])}
+    visited_dict = {str(path[-1]): 0}
+    frontier = [path]
 
     added_nodes = 0
 
@@ -202,7 +199,6 @@ def idaIteration(path, bound, end_state, heur, puzzle, debug):
             if estlen <= bound:
                 string = str(l)
                 if string not in visited or visited_dict[string] > estlen:
-                    global_added_nodes = added_nodes = added_nodes + 1
                     visited_dict[string] = estlen
                     visited.add(string)
                     frontier.append((moves + '0', l))
@@ -212,7 +208,6 @@ def idaIteration(path, bound, end_state, heur, puzzle, debug):
             if estlen <= bound:
                 string = str(u)
                 if string not in visited or visited_dict[string] > estlen:
-                    global_added_nodes = added_nodes = added_nodes + 1
                     visited_dict[string] = estlen
                     visited.add(string)
                     frontier.append((moves + '1', u))
@@ -222,7 +217,6 @@ def idaIteration(path, bound, end_state, heur, puzzle, debug):
             if estlen <= bound:
                 string = str(d)
                 if string not in visited or visited_dict[string] > estlen:
-                    global_added_nodes = added_nodes = added_nodes + 1
                     visited_dict[string] = estlen
                     visited.add(string)
                     frontier.append((moves + '2', d))
@@ -232,7 +226,6 @@ def idaIteration(path, bound, end_state, heur, puzzle, debug):
             if estlen <= bound:
                 string = str(r)
                 if string not in visited or visited_dict[string] > estlen:
-                    global_added_nodes = added_nodes = added_nodes + 1
                     visited_dict[string] = estlen
                     visited.add(string)
                     frontier.append((moves + '3', r))
@@ -250,7 +243,6 @@ def idaIteration(path, bound, end_state, heur, puzzle, debug):
             print("Heuristic: ", heur(path, puzzle.dim))
             print("Length+Heuristic: ", estlen)
             print("Added nodes: ", added_nodes)
-            print("Global added nodes: ", global_added_nodes)
             print("Closed nodes: ", len(visited))
             print("Stack Length: ", len(frontier))
             print('')
@@ -261,11 +253,9 @@ def idaIteration(path, bound, end_state, heur, puzzle, debug):
 class Search(object):
 
     # Initialize with name and data structure
-    def __init__(self, name, _frontier=None):
+    def __init__(self, name, frontier=None):
         self.name = name
-        self.frontier = _frontier
-
-        return None
+        self.frontier = frontier
 
     # Run this search
     def run(self, start, goal, dim, puzzle, _heuristic=heur.zero, _debug=False,
@@ -288,12 +278,12 @@ class Search(object):
             if frontier is None:  # this is an ID search
                 solution = idaSearch(
                     start_pos=start, end_state=goal, heurf=heurf,
-                    puzzle=puzzle, _data_struc=None, _debug=_debug)
+                    puzzle=puzzle, frontierclass=None, _debug=_debug)
                 solution = (solution[0], solution[-1])
             else:                  # this is a normal search
                 solution = genericSearch(
                     start_pos=start, end_state=goal, puzzle=puzzle,
-                    _heurf=heurf, _data_struc=frontier, _debug=_debug)
+                    _heurf=heurf, frontierclass=frontier, _debug=_debug)
 
             tend = timer()
             elapsed_time = tend - tstart
@@ -326,6 +316,47 @@ class Search(object):
         return solution
 
 
-bfs = Search("BFS", Queue),
-a_star = Search("A*", PriorityQueue),
-ida_star = Search("IDA*", None)
+class BFSSearch(Search):
+    def __init__(self):
+        super().__init__(name='BFS')
+
+    def run(self, board, dim, goal):
+        visited = set()
+        frontier = Queue()
+        frontier.put((0, (-1, ), tuple(board)))
+        goal = tuple(goal)
+
+        while not frontier.empty():
+            plen, path, board = frontier.get()
+
+            # next states: 0-l, 1-u, 2-d, 3-r
+            for i, x in enumerate(getNeighborStates(board, dim)):
+                if x and path[-1] != (3 - i) and x not in visited:
+                    frontier.put((plen + 1, path + (i, ), x))
+                    visited.add(x)
+                    if x == goal:
+                        return path + (i, )
+
+
+class HeuristicSearch(Search):
+    def __init__(self, *args, heuristic=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not heuristic:
+            raise TypeError(
+                "__init__() missing 1 required keyword argument: 'heuristic'")
+        self.heuristic = heuristic
+
+    def run(self, *args, **kwargs):
+        return super().run(*args, _heuristic=self.heuristic, **kwargs)
+
+
+class AstarSearch(Search):
+    def __init__(self, heuristic):
+        super().__init__(
+            heuristic=heuristic, name='A*', frontier=PriorityQueue)
+
+
+class IDAstarSearch(Search):
+    def __init__(self, heuristic):
+        super().__init__(
+            heuristic=heuristic, name='IDA*', frontier=None)
