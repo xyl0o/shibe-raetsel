@@ -1,24 +1,20 @@
 #!/usr/bin/env python3
 
-# ######################## Imports
 import sys
 import math
 import pyglet  # INSTALL
 import pyglet.gl
 from pyglet.window import key
-from queue import Queue, PriorityQueue  # ,LifoQueue
-import random
-from shibe_raetsel.search import Search, getNeighborStates
-
 
 from shibe_raetsel import heuristics as heur
+from shibe_raetsel.puzzle import Puzzle
+from shibe_raetsel.search import a_star, bfs, ida_star
 
+from functools import partial
 
-# ######################## Globals
 
 # will be initialized elsewhere
 searches = []
-curSearch = None
 heuristics = []
 curHeur = None
 keys = {}
@@ -46,215 +42,6 @@ except Exception:
     bgimg = None
 
 pyglet.gl.glClearColor(0.1, 0.1, 0.1, 1)
-
-
-# ######################## Puzzle logic
-
-# Objects of class Puzzle represent a singe game
-class Puzzle(object):
-
-    # Initialize with dimension of game
-    def __init__(self, dimX, dimY):
-        self.dim = (dimX, dimY)
-
-        self.initstate = list(range(self.dim[0] * self.dim[1]))[1:]
-        self.initstate.append(0)
-
-        self.twisted = True
-
-        self.reset()
-
-        self.solve('')
-
-        return None
-
-    # Toggle twisted directions
-    def twistmoves(self):
-        self.twisted = not self.twisted
-
-    # Print the solution
-    def debugsolution(self):
-        text = "Solution"
-        for element in self.solution:
-            if self.twisted:
-                text = text + ' ' + ['←', '↓', '↑', '→'][int(element)]
-            else:
-                text = text + ' ' + ['→', '↑', '↓', '←'][int(element)]
-        print(text)
-
-    # Run heuristic
-    def heuristic(self, _heuristic=curHeur):
-        return _heuristic.run(self.state(), self.dim)
-
-    # Update hint
-    def calchint(self):
-        if not self.solved:
-            if self.solution is not '':
-                hints = ['→', '↑', '↓', '←']
-                if puzzle.twisted:
-                    hints.reverse()
-                self.hint = hints[int(self.solution[0])]
-            else:
-                self.hint = None
-        else:
-            self.hint = None
-        return None
-
-    # Set the game to solved state
-    def reset(self):
-        self.board = self.initcopy()
-
-        self.solved = True
-        self.solvable = True
-        self.solve('')
-
-    # Provide a solution to the puzzle
-    def solve(self, solution):
-        if isinstance(solution, tuple):
-            self.update(solution[1], _sol=solution[0])
-        elif isinstance(solution, str):
-            self.solution = solution
-        else:
-            raise(ValueError("The solution in solve() must be str or tuple"))
-
-        self.calchint()
-
-        return None
-
-    # If there is a solution go one step further
-    def step(self):
-        if isinstance(self.solution, tuple):
-            self.solution = self.solution[0]
-            self.step()
-        elif isinstance(self.solution, str):
-            if len(self.solution) < 1:
-                return None  # we are done here
-
-            move = self.solution[0]
-            rest = self.solution[1:]
-            self.update(
-                getNeighborStates(self.board, self.dim)[int(move)],
-                _sol=rest)
-
-        if self.solution == '':
-            if not self.solved:
-                print("the solution was wrong")
-
-    # Return a copy of solved game state
-    def initcopy(self):
-        return self.initstate[:]
-
-    # Return a copy of actual game state
-    def boardcopy(self):
-        return self.board[:]
-
-    # Return index of given number in game
-    def index(self, element):
-        return (
-            self.board.index(element) % self.dim[0],
-            self.board.index(element) // self.dim[0])
-
-    # Return element at given coords
-    def tile(self, x, y):
-        return self.board[y * self.dim[0] + x]
-
-    # Set the game state and check for solvability
-    def update(self, newfield, _paritycheck=True, _sol=''):
-        self.board = newfield[:]
-        if _paritycheck:
-            self.checkparity()
-        self.checksolved()
-
-        self.solve(_sol)
-
-    # Randomize puzzle (with a heuristic bound)
-    def random(self, _bound=0, _heuristic=None):
-        iter_max = 10000
-        if _bound <= 0:
-            iter_max = 1
-
-        min_heur = 2147483647
-        min_board = None
-
-        for i in range(iter_max):
-            board = self.boardcopy()
-            self.solvable = False
-            while not self.solvable:
-                random.shuffle(board)
-                self.update(board)
-
-            heur = _heuristic.run(self.state(), self.dim)
-            if heur < min_heur:
-                min_heur = heur
-                min_board = board
-                if heur < _bound:
-                    break
-
-        self.update(min_board)
-
-    # Is the puzzle solved?
-    def checksolved(self):
-        self.solved = self.board == self.initcopy()
-
-    # Is the puzzle solvable?
-    def checkparity(self):
-        inversions = 0
-        for num in self.board:
-            if num == 0:
-                continue
-            for other in self.board:
-                if other == 0:
-                    continue
-
-                numpos = self.board.index(num)
-                otherpos = self.board.index(other)
-                if (numpos < otherpos) and (other < num):
-                    inversions += 1
-
-        if (self.dim[0] % 2) != 0:
-            self.solvable = (inversions % 2) == 0
-        else:
-            if ((self.dim[1] - self.index(0)[1]) % 2) != 0:
-                self.solvable = (inversions % 2) == 0
-            else:
-                self.solvable = (inversions % 2) != 0
-
-        return None
-
-    # Swap the empty tile with neighbor
-    def move(self, direction):
-        neighbors = list(getNeighborStates(self.board, self.dim))
-
-        if self.twisted:
-            direction = [0, 1, 2, 3][::-1][direction]
-
-        new = neighbors[direction]
-
-        if new is None:
-            if flag_debug:
-                print("This move is not possible (" + str(direction) + ")")
-            return None
-
-        if self.solution != '' and str(direction) == self.solution[0]:
-            self.update(new, _paritycheck=False, _sol=self.solution[1:])
-        else:
-            self.update(new, _paritycheck=False)
-
-        return None
-
-    # Run a search on puzzle
-    def search(self, searchObject, heuristicObject,
-               _debug=False, _profile=False):
-        start = self.boardcopy()
-        goal = self.initcopy()
-
-        return searchObject.run(
-            start=start, goal=goal, dim=self.dim, puzzle=self,
-            _heuristic=heuristicObject, _debug=_debug, _profile=_profile)
-
-    # Return a state with no solution
-    def state(self):
-        return '', self.boardcopy()
 
 
 # ######################## GUI
@@ -376,7 +163,7 @@ def toggleHint():
 # ######################## Main function
 
 def main():
-    global puzzle, searches, curSearch, heuristics, curHeur, keys
+    global puzzle, searches, heuristics, curHeur, keys
 
     if len(sys.argv) == 1:
         puzzle = Puzzle(4, 4)
@@ -391,7 +178,7 @@ def main():
             board.append(tile)
         if 0 not in board:
             print("Error reading input! no zero")
-            sys.exit(0)
+            sys.exit(1)
         y = int(math.sqrt(len(board)))
         while y > 0:
             if len(board) % y != 0:
@@ -410,10 +197,7 @@ def main():
         heur.linear_conflict_3x]
     curHeur = heuristics[0]
 
-    searches = [Search("BFS", Queue),
-                Search("A*", PriorityQueue),
-                Search("IDA*", None)]
-    curSearch = searches[0]
+    searches = [a_star, bfs, ida_star]
 
     keys = {
         key.B: ('b', "search BFS",
