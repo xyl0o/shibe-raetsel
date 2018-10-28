@@ -4,3 +4,4 @@
 *.tar.gz
 *.png
 **/*.egg-info/
+venv/
