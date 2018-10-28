@@ -136,9 +136,9 @@ class Puzzle(object):
 
             move = self.solution[0]
             rest = self.solution[1:]
-            self.update(getNeighborStates(
-                                self.board,
-                                self.dim)[int(move)], _sol=rest)
+            self.update(
+                getNeighborStates(self.board, self.dim)[int(move)],
+                _sol=rest)
 
         if self.solution == '':
             if not self.solved:
@@ -154,12 +154,13 @@ class Puzzle(object):
 
     # Return index of given number in game
     def index(self, element):
-        return self.board.index(element) % self.dim[0],\
-               self.board.index(element) // self.dim[0]
+        return (
+            self.board.index(element) % self.dim[0],
+            self.board.index(element) // self.dim[0])
 
     # Return element at given coords
     def tile(self, x, y):
-        return self.board[y*self.dim[0] + x]
+        return self.board[y * self.dim[0] + x]
 
     # Set the game state and check for solvability
     def update(self, newfield, _paritycheck=True, _sol=''):
@@ -371,7 +372,7 @@ def getNeighborStates(state, dim):
 
     # up:
     iswap = izero + dim[0]
-    if iswap < dim[0]*dim[1] and izero_mod == iswap % dim[0]:
+    if iswap < dim[0] * dim[1] and izero_mod == iswap % dim[0]:
         up = state[:]
         up[izero] = up[iswap]
         up[iswap] = 0
@@ -467,7 +468,7 @@ def genericSearch(start_pos, end_state, _heurf=lambda p, d: 0,
                   "Visited nodes: " + str(len(visited)) + "\n" +
                   "Max. frontier: " + str(max_frontier) + "\n" +
                   "Cur Distance:  " + str(hcost) + " | " +
-                  str(hcost-plen+1) + "h, " + str(plen - 1) + "p")
+                  str(hcost - plen + 1) + "h, " + str(plen - 1) + "p")
     return None
 
 
@@ -576,7 +577,7 @@ def idaIteration(path, bound, end_state, heur, debug):
                     visited.add(string)
                     frontier.append((moves + '3', r))
 
-        if debug and current_added//10000 != added_nodes//10000:
+        if debug and current_added // 10000 != added_nodes // 10000:
             stop = timer()
             deltaSecs = (stop - start)
             start = timer()
@@ -619,8 +620,8 @@ def on_draw():
     else:
         pyglet.gl.glClearColor(0.1, 0.1, 0.1, 1)
 
-    offsetx, offsety = ((window.width-maxdimension)/2,
-                        (window.height-maxdimension)/2)
+    offsetx = (window.width - maxdimension) / 2
+    offsety = (window.height - maxdimension) / 2
     window.clear()
 
     # ---- Use background image
@@ -644,8 +645,10 @@ def on_draw():
 
             number = pyglet.text.Label(
                 tile, font_size=size, bold=True, color=color,
-                x=offsetx+(x+1)*(maxdimension/(puzzle.dim[0]+1)),
-                y=window.height-offsety-(y+1)*(maxdimension/(puzzle.dim[1]+1)),
+                x=(offsetx + (x + 1) *
+                   (maxdimension / (puzzle.dim[0] + 1))),
+                y=(window.height - offsety - (y + 1) *
+                   (maxdimension / (puzzle.dim[1] + 1))),
                 anchor_x='center', anchor_y='center')
             number.draw()
 
@@ -662,23 +665,26 @@ def on_draw():
 
     right = window.width - 180
     labels.append(("Hint: " + str(flag_hint), right, top))
-    labels.append(("Debug: " + str(flag_debug), right, top - 1.5*font_small))
-    labels.append(("Profile: " + str(flag_profile), right, top - 3*font_small))
+    labels.append(("Debug: " + str(flag_debug),
+                   right, top - 1.5 * font_small))
+    labels.append(("Profile: " + str(flag_profile),
+                   right, top - 3 * font_small))
     labels.append(("Solution: " + str(len(puzzle.solution)) + " steps",
-                   right, top - 6*font_small))
+                   right, top - 6 * font_small))
 
     # ---- Draw controls
-    x = line = round(1.5*font_small)
+    x = line = round(1.5 * font_small)
     for char, desc, func in list(keys.values())[::-1]:
         if char is not None:
-            labels.append((char+' - '+desc, 20, x))
+            labels.append((char + ' - ' + desc, 20, x))
             x += line
     labels.append(("Controls:", 10, x))
 
     font = 'Monospace'
     for text, posx, posy in labels:
-        pyglet.text.Label(text, font_name=font, font_size=font_small, x=posx,
-                          y=posy, anchor_x='left', anchor_y='center').draw()
+        pyglet.text.Label(
+            text, font_name=font, font_size=font_small,
+            x=posx, y=posy, anchor_x='left', anchor_y='center').draw()
 
 
 @window.event
@@ -689,7 +695,7 @@ def on_key_press(symbol, modifiers):
 
 def toggleHeuristic():
     global curHeur, heuristics
-    new_index = (heuristics.index(curHeur)+1) % len(heuristics)
+    new_index = (heuristics.index(curHeur) + 1) % len(heuristics)
     curHeur = heuristics[new_index]
 
 
@@ -733,7 +739,7 @@ def main():
                 y -= 1
             else:
                 break
-        puzzle = Puzzle(len(board)//y, y)
+        puzzle = Puzzle(len(board) // y, y)
         puzzle.update(board)
     else:
         print("Unable to parse given data")
@@ -779,6 +785,7 @@ def main():
         key.RIGHT: (None, "move right", lambda: puzzle.move(0))}
 
     pyglet.app.run()
+
 
 if __name__ == '__main__':
     main()

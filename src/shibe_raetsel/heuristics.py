@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 
 # highly used function!
 #
@@ -11,7 +13,7 @@ def hCostToorac(path, dim, _oldheur=0):
             num = state[row * dim[0] + col]
             if num is 0:
                 continue
-            should_row, should_col = divmod((num-1), dim[0])
+            should_row, should_col = divmod((num - 1), dim[0])
             if row != should_row:
                 cost += 1
             if col != should_col:
@@ -46,7 +48,7 @@ def hCostManhattan(path, dim, _oldheur=0):
                 num = state[row * dim[0] + col]
                 if num is 0:
                     continue
-                should_row, should_col = divmod(num-1, dim[0])
+                should_row, should_col = divmod(num - 1, dim[0])
 
                 if should_row > row:
                     cost += should_row - row
@@ -83,7 +85,7 @@ def hCostManhattan(path, dim, _oldheur=0):
 
     swap = state[iswap]
 
-    swap_should_row, swap_should_col = divmod(swap-1, dim[0])
+    swap_should_row, swap_should_col = divmod(swap - 1, dim[0])
 
     swap_was_impact = abs(swap_should_row - swap_was_row) +\
         abs(swap_should_col - swap_was_col)
@@ -112,10 +114,10 @@ def hCostLinearConflict(path, dim, _oldheur=0):
             should_row, should_col = divmod(num - 1, dim[0])
             if should_col == col:  # col num should
                 for i in range(row):
-                    pre = state[index - (i+1) * dim[0]]
+                    pre = state[index - (i + 1) * dim[0]]
                     if pre < num:
                         continue  # pre != 0 is checked implicitly
-                    if (pre-1) % dim[0] != col:
+                    if (pre - 1) % dim[0] != col:
                         continue  # col pre should
                     cost += 2
 
@@ -124,7 +126,7 @@ def hCostLinearConflict(path, dim, _oldheur=0):
                     pre = state[x]
                     if pre < num:
                         continue  # pre != 0 is checked implicitly
-                    if (pre-1) // dim[0] != row:
+                    if (pre - 1) // dim[0] != row:
                         continue  # row pre should
                     cost += 2
 
