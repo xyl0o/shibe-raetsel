@@ -12,10 +12,7 @@ from timeit import default_timer as timer
 
 import cProfile
 
-
-from shibe_raetsel.heuristics import (
-    hCostLC1_1x, hCostLC1_5x, hCostLC2x, hCostLC3x,
-    hCostLinearConflict, hCostManhattan, hCostMpt, hCostToorac)
+from shibe_raetsel import heuristics as heur
 
 
 # ######################## Globals
@@ -260,21 +257,6 @@ class Puzzle(object):
         return '', self.boardcopy()
 
 
-# ######################## Heuristic class
-
-class Heuristic(object):
-
-    # Initialize with name and function
-    def __init__(self, name, function):
-        self.name = name
-        self.function = function
-        return None
-
-    # Calc heuristic cost
-    def run(self, state, dim):
-        return self.function(state, dim)
-
-
 # ######################## Search class
 
 class Search(object):
@@ -287,10 +269,8 @@ class Search(object):
         return None
 
     # Run this search
-    def run(self, start, goal, dim, _heuristic=None, _debug=False,
+    def run(self, start, goal, dim, _heuristic=heur.zero, _debug=False,
             _profile=False):
-        if _heuristic is None:
-            _heuristic = Heuristic("Zero", lambda p, d: 0)
 
         print("\nSearching with " + self.name +
               "\n    Heuristic function: " + _heuristic.name +
@@ -744,14 +724,11 @@ def main():
     else:
         print("Unable to parse given data")
 
-    heuristics = [Heuristic("Misplaced Tiles", hCostMpt),
-                  Heuristic("Tiles out of row & column", hCostToorac),
-                  Heuristic("Manhattan Distance", hCostManhattan),
-                  Heuristic("Linear Conflicts", hCostLinearConflict),
-                  Heuristic("LC * 1.1", hCostLC1_1x),
-                  Heuristic("LC * 1.5", hCostLC1_5x),
-                  Heuristic("LC * 2", hCostLC2x),
-                  Heuristic("LC * 3", hCostLC3x)]
+    heuristics = [
+        heur.misplaced_tiles, heur.toorac, heur.manhattan,
+        heur.linear_conflict, heur.linear_conflict_1_1x,
+        heur.linear_conflict_1_5x, heur.linear_conflict_2x,
+        heur.linear_conflict_3x]
     curHeur = heuristics[0]
 
     searches = [Search("BFS", Queue),
@@ -760,28 +737,31 @@ def main():
     curSearch = searches[0]
 
     keys = {
-        key.B:     ('b', "search BFS", lambda:
-                    puzzle.solve(puzzle.search(searches[0], curHeur,
-                                 _debug=flag_debug, _profile=flag_profile))),
-        key.A:     ('a', "search A*", lambda:
-                    puzzle.solve(puzzle.search(searches[1], curHeur,
-                                 _debug=flag_debug, _profile=flag_profile))),
-        key.I:     ('i', "search IDA*", lambda:
-                    puzzle.solve(puzzle.search(searches[2], curHeur,
-                                 _debug=flag_debug, _profile=flag_profile))),
+        key.B: ('b', "search BFS",
+                lambda: puzzle.solve(
+                    puzzle.search(searches[0], curHeur, debug=flag_debug,
+                                  _profile=flag_profile))),
+        key.A: ('a', "search A*",
+                lambda: puzzle.solve(
+                    puzzle.search(searches[1], curHeur, _debug=flag_debug,
+                                  _profile=flag_profile))),
+        key.I: ('i', "search IDA*",
+                lambda: puzzle.solve(
+                    puzzle.search(searches[2], curHeur, debug=flag_debug,
+                                  _profile=flag_profile))),
         key.SPACE: ('␣', "step through solution", lambda: puzzle.step()),
         key.ENTER: ('↲', "reset puzzle", lambda: puzzle.reset()),
-        key.E:     ('e', "change heur", lambda: toggleHeuristic()),
-        key.H:     ('h', "toggle hint", lambda: toggleHint()),
-        key.R:     ('r', "random", lambda: puzzle.random(0, curHeur)),
-        key.T:     ('t', "random (limit)", lambda: puzzle.random(20, curHeur)),
-        key.Y:     ('y', "switch key directions", lambda: puzzle.twistmoves()),
-        key.X:     ('x', "toggle debug", lambda: toggleDebug()),
-        key.C:     ('c', "toggle profile", lambda: toggleProfile()),
-        key.P:     ('p', "print solution", lambda: puzzle.debugsolution()),
-        key.LEFT:  (None, "move left", lambda: puzzle.move(3)),
-        key.UP:    (None, "move up", lambda: puzzle.move(1)),
-        key.DOWN:  (None, "move down", lambda: puzzle.move(2)),
+        key.E: ('e', "change heur", lambda: toggleHeuristic()),
+        key.H: ('h', "toggle hint", lambda: toggleHint()),
+        key.R: ('r', "random", lambda: puzzle.random(0, curHeur)),
+        key.T: ('t', "random (limit)", lambda: puzzle.random(20, curHeur)),
+        key.Y: ('y', "switch key directions", lambda: puzzle.twistmoves()),
+        key.X: ('x', "toggle debug", lambda: toggleDebug()),
+        key.C: ('c', "toggle profile", lambda: toggleProfile()),
+        key.P: ('p', "print solution", lambda: puzzle.debugsolution()),
+        key.LEFT: (None, "move left", lambda: puzzle.move(3)),
+        key.UP: (None, "move up", lambda: puzzle.move(1)),
+        key.DOWN: (None, "move down", lambda: puzzle.move(2)),
         key.RIGHT: (None, "move right", lambda: puzzle.move(0))}
 
     pyglet.app.run()
